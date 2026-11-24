@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anticipatory Commerce Replay</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1c1a; --muted: #6b6860; --line: #e3e0d8;
+    --accent: #1f5eff; --good: #12805c; --bad: #c2362b;
+    --c-category: #0e7c86; --c-colour: #c25b00; --c-size: #7a3fd0; --c-brand: #1f5eff; --c-max_price: #12805c;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --panel: #1d1d1b; --ink: #f1efe8; --muted: #a09c90; --line: #33322e;
+      --accent: #6c93ff; --good: #3fcf9b; --bad: #ff7a6b;
+      --c-category: #4fd1dc; --c-colour: #ffa04d; --c-size: #b690ff; --c-brand: #6c93ff; --c-max_price: #3fcf9b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, select { font: inherit; color: inherit; }
+  .app { max-width: 1180px; margin: 0 auto; padding: 20px 16px 28px; display: grid; gap: 16px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  h1 small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .controls select { max-width: 340px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  .btn { padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:focus-visible, select:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+  .pane { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-height: 360px; }
+  .pane h2 { margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  .words { display: flex; flex-wrap: wrap; gap: 6px; min-height: 76px; align-content: flex-start; }
+  .word { padding: 5px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+  .word.hit { color: #fff; border-color: transparent; font-weight: 600; }
+  .word.now { box-shadow: 0 0 0 2px var(--accent); }
+  .slots { margin-top: 20px; display: grid; gap: 8px; }
+  .slot { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; padding: 8px 12px;
+          border-radius: 10px; border: 1px dashed var(--line); color: var(--muted); }
+  .slot b { font-weight: 600; color: var(--ink); }
+  .slot.filled { border-style: solid; }
+  .slot .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: var(--line); }
+  .slot.flash { animation: flash .9s ease-out; }
+  @keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .slot.flash { animation: none; } }
+  .count { font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
+  .count small { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 8px; }
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--bg); }
+  .card .sw { height: 54px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--line); }
+  .card .t { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .card .m { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card.committed { border: 2px solid var(--good); }
+  .banner { margin-top: 14px; padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+  .banner.commit { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+  .banner.wait { background: var(--bg); color: var(--muted); font-weight: 400; }
+  .banner.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+  footer { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px;
+           display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .stat span { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .stat b { font-size: 22px; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; margin-top: 6px; border: 1px solid var(--line); }
+  .bar i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+  .note { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<noscript>This replay needs JavaScript.</noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="replay.js"></script>
+<script>
+const h = React.createElement;
+const { useState, useEffect, useMemo, useRef } = React;
+const SLOTS = ["category", "colour", "size", "brand", "max_price"];
+const LABEL = { category: "Category", colour: "Colour", size: "Size", brand: "Brand", max_price: "Max price" };
+const SWATCH = { black: "#222", navy: "#1c2c5a", grey: "#8b8d92", blue: "#2f6fe0", white: "#f4f4f2", olive: "#6b6d2b",
+  red: "#c8312b", maroon: "#6d1d2b", green: "#2f8a4f", beige: "#d8c8a8", brown: "#6b4426", yellow: "#e8c32e",
+  pink: "#e87fa8", tan: "#b8895a", gold: "#c9a227", silver: "#c0c3c8" };
+const { requests, products } = window.REPLAY;
+const money = (n) => "₹" + Number(n).toLocaleString("en-IN");
+const show = (slot, v) => (slot === "max_price" ? "under " + money(v) : String(v));
+
+function changedSlot(steps, i) {
+  const prev = i ? steps[i - 1].filters : {};
+  return SLOTS.find((s) => steps[i].filters[s] !== (prev[s] ?? null) && steps[i].filters[s] != null);
+}
+
+function Words({ req, upto }) {
+  return h("div", { className: "words", "aria-live": "polite" },
+    req.steps.slice(0, upto).map((st, i) => {
+      const slot = changedSlot(req.steps, i);
+      return h("span", { key: i, className: "word" + (slot ? " hit" : "") + (i === upto - 1 ? " now" : ""),
+        style: slot ? { background: `var(--c-${slot})` } : null, title: slot ? LABEL[slot] : "" }, st.word);
+    }));
+}
+
+function Slots({ step, prev }) {
+  return h("div", { className: "slots" }, SLOTS.map((s) => {
+    const v = step ? step.filters[s] : null;
+    const was = prev ? prev.filters[s] : null;
+    return h("div", { key: s + String(v), className: "slot" + (v != null ? " filled" : "") + (v !== was ? " flash" : ""),
+      style: v != null ? { borderColor: `var(--c-${s})` } : null },
+      h("span", null, h("i", { className: "dot", style: v != null ? { background: `var(--c-${s})` } : null }), LABEL[s]),
+      h("b", null, v != null ? show(s, v) : "—"));
+  }));
+}
+
+function Card({ id, committed }) {
+  const p = products[id];
+  if (!p) return null;
+  return h("div", { className: "card" + (committed ? " committed" : ""), tabIndex: 0 },
+    h("div", { className: "sw", style: { background: SWATCH[p.colour] || "#ccc" } }),
+    h("div", { className: "t" }, p.title),
+    h("div", { className: "m" }, [p.size && "Size " + p.size, money(p.price)].filter(Boolean).join(" · "), " · ", id));
+}
+
+function App() {
+  const [idx, setIdx] = useState(0);
+  const [upto, setUpto] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(700);
+  const req = requests[idx];
+  const n = req.steps.length;
+  const timer = useRef(null);
+
+  useEffect(() => { setUpto(0); setPlaying(false); }, [idx]);
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setTimeout(() => (upto < n ? setUpto(upto + 1) : setPlaying(false)), speed);
+    return () => clearTimeout(timer.current);
+  }, [playing, upto, n, speed]);
+
+  const step = upto ? req.steps[upto - 1] : null;
+  const prev = upto > 1 ? req.steps[upto - 2] : null;
+  const committedId = useMemo(() => {
+    for (let i = 0; i < upto; i++) if (req.steps[i].commit) return req.steps[i].commit;
+    return null;
+  }, [req, upto]);
+  const done = upto === n;
+  const overall = useMemo(() => requests.reduce((a, r) => a + r.score, 0) / requests.length, []);
+  const shelf = done && req.final ? [req.final] : step ? step.shelf : [];
+
+  return h("div", { className: "app" },
+    h("header", null,
+      h("h1", null, "Anticipatory Commerce", h("small", null, "Words arrive one at a time. The agent reads, waits, and commits only when it is safe.")),
+      h("div", { className: "controls" },
+        h("select", { value: idx, onChange: (e) => setIdx(+e.target.value), "aria-label": "Choose a request" },
+          requests.map((r, i) => h("option", { key: r.id, value: i }, `${r.id}${r.tags.length ? " [" + r.tags.join(", ") + "]" : ""} — ${r.text.slice(0, 48)}`))),
+        h("button", { className: "btn", onClick: () => { setUpto(0); setPlaying(false); } }, "Reset"),
+        h("button", { className: "btn", onClick: () => setUpto(Math.min(n, upto + 1)), disabled: done }, "Step"),
+        h("button", { className: "btn primary", onClick: () => { if (done) setUpto(0); setPlaying(!playing); } }, playing ? "Pause" : "Play"),
+        h("select", { value: speed, onChange: (e) => setSpeed(+e.target.value), "aria-label": "Speed" },
+          [[1100, "Slow"], [700, "Normal"], [300, "Fast"]].map(([v, l]) => h("option", { key: v, value: v }, l))))),
+    h("div", { className: "split" },
+      h("section", { className: "pane", "aria-label": "What the shopper says" },
+        h("h2", null, "The shopper says"),
+        h(Words, { req, upto }),
+        h("h2", { style: { marginTop: 22 } }, "The agent's reading"),
+        h(Slots, { step, prev })),
+      h("section", { className: "pane", "aria-label": "What the agent shows" },
+        h("h2", null, "The agent's shelf"),
+        h("div", { className: "count" }, step ? step.matches : "—", h("small", null, "items still match")),
+        committedId
+          ? h("div", { className: "banner commit" }, `Committed ${committedId} after word ${req.commit_at} of ${n} — safe, one product left.`)
+          : h("div", { className: "banner wait" }, done ? "Never committed early: waited for the full request." : "Waiting: not sure enough to commit yet."),
+        h("div", { className: "shelf" }, shelf.map((id) => h(Card, { key: id, id, committed: id === committedId }))),
+        done && h("div", { className: "banner " + (req.correct ? "commit" : "bad") },
+          req.correct ? `Final answer ${req.final} is correct.` : `Final answer ${req.final} is wrong (target ${req.target}).`))),
+    h("footer", null,
+      h("div", { className: "stat" }, h("span", null, "Progress"), h("b", null, `${upto}/${n} words`),
+        h("div", { className: "bar" }, h("i", { style: { width: (100 * upto / n) + "%" } }))),
+      h("div", { className: "stat" }, h("span", null, "This request"), h("b", null, req.score.toFixed(1))),
+      h("div", { className: "stat" }, h("span", null, "Searches used"), h("b", null, req.searches)),
+      h("div", { className: "stat" }, h("span", null, `Whole set (${requests.length})`), h("b", null, overall.toFixed(1)))),
+    h("p", { className: "note" }, "Scores are per request × 100; the whole-set figure is the same average evaluate.py prints. Match counts are display-only and are not agent searches."));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>
